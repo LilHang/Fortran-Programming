@@ -1,0 +1,29 @@
+ Example 1 - Column Test                                                 
+
+ Program SWMS_2D
+ Time independent boundary conditions
+ Vertical plane flow, V = L*L
+ Units: L = cm   , T = sec  , M = -    
+
+ Max. number of iterations             20
+ Absolute water content tolerance [-] 0.00010
+ Absolute pressure head tolerance [L] 0.01000
+
+
+ MatNum,        thR    thS    tha    thm      alpha         n          Ks          Kk          thk
+
+    1          0.020  0.350  0.020  0.350   0.410E-01   0.196E+01   0.722E-03   0.695E-03   0.287E+00
+
+
+ MatNum          Qe     Q        h         C         K
+
+    1          1.000  0.350    -0.000  0.00E+00   0.722E-03
+    1          0.990  0.347    -3.386  0.19E-02   0.717E-03
+    1          0.900  0.317   -11.779  0.47E-02   0.704E-03
+    1          0.850  0.301   -15.150  0.50E-02   0.699E-03
+    1          0.750  0.267   -21.729  0.49E-02   0.443E-03
+    1          0.650  0.234   -29.003  0.42E-02   0.205E-03
+    1          0.500  0.185   -43.426  0.28E-02   0.548E-04
+    1          0.350  0.135   -67.993  0.14E-02   0.994E-05
+    1          0.200  0.086  -126.999  0.48E-03   0.736E-06
+    1          0.100  0.053  -264.559  0.12E-03   0.304E-07
