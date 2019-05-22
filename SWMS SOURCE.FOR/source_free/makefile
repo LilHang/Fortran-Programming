@@ -23,5 +23,5 @@ watflow2.o : watflow2.f90
 	gfortran -c watflow2.f90
 .PHONY:clean
 clean :
-		del  run_swms $(objects)
+		rm $(objects)
 
