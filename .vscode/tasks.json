@@ -13,7 +13,7 @@
                 "-static-libgcc",
                 //"-std=f95"
             ],
-            "type": "shell",
+            "type": "process",
             "group": {
                 "kind": "build",
                 "isDefault": true
