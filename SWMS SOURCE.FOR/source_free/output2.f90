@@ -8,7 +8,7 @@ Subroutine tlinf(numnp, numbp, kode, q, hnew, cumq, width, swidth, kxb, t, dt, t
     Integer tlevel
     Logical shortf, sinkf, atminf, lwat, lchem
     Dimension q(numnp), kode(numnp), kxb(numbp), swidth(numkd), hnew(numnp), width(numbp), cumq(numkd), hmean(numkd), vmean(numkd)
-
+    ! vmean:values of boundary fluxes across a certain type of boundary
     If (tlevel==1) Then
       If (.Not. lchem) Then
         Write (70, 110)
@@ -24,15 +24,15 @@ Subroutine tlinf(numnp, numbp, kode, q, hnew, cumq, width, swidth, kxb, t, dt, t
       If (lwat) Write (78, 160)
     End If
     If (lwat .Or. tlevel==1) Then
-      Do i = 1, numkd
+      Do i = 1, numkd ! 边界种类数
         vmean(i) = 0.
         hmean(i) = 0.
       End Do
       Do i = 1, numbp
-        n = kxb(i)
-        j = iabs(kode(n))
-        If (j==0) Goto 12
-        hmean(j) = hmean(j) + hnew(n)*width(i)/swidth(j)
+        n = kxb(i) ! 边界编号
+        j = iabs(kode(n)) ! 边界编码
+        If (j==0) Goto 12 ! 若为0即不透水边界，则跳过
+        hmean(j) = hmean(j) + hnew(n)*width(i)/swidth(j) ! 计算平均值
         If (j==4) vmean(j) = vmean(j) - q(n)/swidth(j)
       12 End Do
       hmeant = hmean(4)

@@ -22,14 +22,14 @@ Subroutine watflow(numnp, numel, numeld, ntab, ntabd, mband, mbandd, nmat, nseep
               rqi(numnpd, mnorth),rq(numnp), qq(numnp), rqidot(mnorth), qi(numnpd, mnorth)
 
     If (lwat .And. tlevel/=1) Then
-      Do i = 1, numnp
+      Do i = 1, numnp ! 更新数组
         hold(i) = hnew(i)
         thold(i) = thnew(i)
-        cono(i) = con(i)
-        If (kode(i)<1) Then
+        cono(i) = con(i) ! old time conductivity
+        If (kode(i)<1) Then ! 流量边界节点，或内部不是源汇的节点
           htemp(i) = hnew(i) + (hnew(i)-hold(i))*dt/dtold
           hnew(i) = htemp(i)
-        Else
+        Else                ! 水头边界时
           htemp(i) = hnew(i)
         End If
       End Do
@@ -62,18 +62,18 @@ Subroutine watflow(numnp, numel, numeld, ntab, ntabd, mband, mbandd, nmat, nseep
     End If
 
     Do i = 1, numnp
-      htemp(i) = hnew(i)
+      htemp(i) = hnew(i)  ! 上次迭代的解
       If (lort) b(i) = b1(i)
-      hnew(i) = sngl(b(i))
-      If (abs(hnew(i))>1.E+10) hnew(i) = sign(1.E+10, hnew(i))
+      hnew(i) = sngl(b(i)) ! 当前时间步长的解
+      If (abs(hnew(i))>1.E+10) hnew(i) = sign(1.E+10, hnew(i)) ! 最大值
     End Do
     iter = iter + 1
     itcum = itcum + 1
-    If (explic) Goto 18
+    If (explic) Goto 18 ! 若为显式（C取前一时刻），则跳过迭代
 
   !     Test for convergence
     itcrit = .True.
-    Do i = 1, numnp
+    Do i = 1, numnp ! 循环判断每个节点解的收敛性
       m = matnum(i)
       epsth = 0.
       epsh = 0.
@@ -83,18 +83,18 @@ Subroutine watflow(numnp, numel, numeld, ntab, ntabd, mband, mbandd, nmat, nseep
       Else
         epsh = abs(hnew(i)-htemp(i))
       End If
-      If (epsth>tolth .Or. epsh>tolh) Then
+      If (epsth>tolth .Or. epsh>tolh) Then ! 若有一个不满足，则退出循环，itcrit = false
         itcrit = .False.
         Goto 15
       End If
     End Do
     15 Continue
 
-    If (.Not. itcrit) Then
+    If (.Not. itcrit) Then ! 当前解不收敛，则根据规则迭代
       If (iter<maxit .Or. (.Not. lwat .And. iter<5*maxit)) Then
         Goto 12
       Else If (dt<=dtmin) Then
-        explic = .True.
+        explic = .True.      ! ?
         Do i = 1, numnp
           hnew(i) = hold(i)
           htemp(i) = hold(i)
@@ -126,9 +126,10 @@ Subroutine watflow(numnp, numel, numeld, ntab, ntabd, mband, mbandd, nmat, nseep
         thold(i) = thnew(i)
       End Do
     End If
-    Return
+
 
     101 Format (' Steady state was reached after', I6, ' iterations.')
+    Return
   End Subroutine watflow
 
   !***********************************************************************
@@ -147,11 +148,11 @@ Subroutine watflow(numnp, numel, numeld, ntab, ntabd, mband, mbandd, nmat, nseep
   !     Initialisation
     xmul = 1.
     If (iter==0) Then
-      vmeanr = 0.
-      hmeanr = 0.
-      arear = 0.
+      vmeanr = 0. ! actual transpiration rate(vroot)
+      hmeanr = 0. ! mean value of the pressure head within the root zone
+      arear = 0. ! area of the domain occupied by the root zone
     End If
-    Do i = 1, numnp
+    Do i = 1, numnp ! 初始化b,b1,f,a数组为0
       b(i) = 0.D0
       If (lort) b1(i) = hnew(i)
       f(i) = 0.
@@ -177,22 +178,23 @@ Subroutine watflow(numnp, numel, numeld, ntab, ntabd, mband, mbandd, nmat, nseep
         iloc(1) = 1
         iloc(2) = k + 1
         iloc(3) = k + 2
-        ci(1) = x(l) - x(j)
+        ci(1) = x(l) - x(j) ! 计算b，c
         ci(2) = x(i) - x(l)
         ci(3) = x(j) - x(i)
         bi(1) = y(j) - y(l)
         bi(2) = y(l) - y(i)
         bi(3) = y(i) - y(j)
-        ae = (ci(3)*bi(2)-ci(2)*bi(3))/2.
-        cone = (con(i)+con(j)+con(l))/3.
-        If (kat==1) xmul = 2.*3.1416*(x(i)+x(j)+x(l))/3.
-        amul = xmul*cone/4./ae
-        bmul = xmul*cone/2.
-        fmul = xmul*ae/12.
+        ae = (ci(3)*bi(2)-ci(2)*bi(3))/2. ! 计算单元面积
+        cone = (con(i)+con(j)+con(l))/3.  ! 计算单元平均水利传导度，由hnew计算得到
+        If (kat==1) xmul = 2.*3.1416*(x(i)+x(j)+x(l))/3. ! 若是轴对称流问题则按此公式计算轴对称流
+        amul = xmul*cone/4./ae ! A系数
+        bmul = xmul*cone/2.    ! B系数
+        fmul = xmul*ae/12.     ! D系数
         betae = (beta(i)+beta(j)+beta(l))/3.
-        If (sinkf .And. betae>0. .And. iter==0) Then
+        ! 与源汇项有关
+        If (sinkf .And. betae>0. .And. iter==0) Then ! 每个时间步长内，只计算1次
           sinke = (sink(i)+sink(j)+sink(l))/3.
-          If (hnew(i)>p3) ds(i) = ds(i) + fmul*(3.*sinke+sink(i))
+          If (hnew(i)>p3) ds(i) = ds(i) + fmul*(3.*sinke+sink(i)) ! 源汇项汇总,下同
           If (hnew(j)>p3) ds(j) = ds(j) + fmul*(3.*sinke+sink(j))
           If (hnew(l)>p3) ds(l) = ds(l) + fmul*(3.*sinke+sink(l))
           hnewe = (hnew(i)+hnew(j)+hnew(l))/3.
@@ -202,24 +204,24 @@ Subroutine watflow(numnp, numel, numeld, ntab, ntabd, mband, mbandd, nmat, nseep
         End If
         Do i = 1, 3
           ig = kx(n, iloc(i))
-          f(ig) = f(ig) + fmul*4.
-          If (kat>=1) b(ig) = b(ig) + bmul*(condk*bi(i)+condj*ci(i))
+          f(ig) = f(ig) + fmul*4. ! F矩阵
+          If (kat>=1) b(ig) = b(ig) + bmul*(condk*bi(i)+condj*ci(i)) ! B向量
           Do j = 1, 3
             jg = kx(n, iloc(j))
-            e(i, j) = condi*bi(i)*bi(j) + condk*(bi(i)*ci(j)+ci(i)*bi(j)) + condj*ci(i)*ci(j)
+            e(i, j) = condi*bi(i)*bi(j) + condk*(bi(i)*ci(j)+ci(i)*bi(j)) + condj*ci(i)*ci(j) ! A 矩阵（不包括系数）
             If (lort) Then
               Call find(ig, jg, kk, numnp, mbandd, iad, iadn)
-              a(kk, ig) = a(kk, ig) + amul*e(i, j)
+              a(kk, ig) = a(kk, ig) + amul*e(i, j) ! 单刚矩阵 加入 总刚矩阵
             Else
               ib = ig - jg + 1
-              If (ib>=1) a(ib, jg) = a(ib, jg) + amul*e(i, j)
+              If (ib>=1) a(ib, jg) = a(ib, jg) + amul*e(i, j) ! 单刚矩阵 加入 总刚矩阵
             End If
           End Do
         End Do
       End Do
 
-    End Do
-    If (arear>0. .And. iter==0) hmeanr = hmeanr/arear
+    End Do ! 以上形成总刚矩阵A，F矩阵，B向量
+    If (arear>0. .And. iter==0) hmeanr = hmeanr/arear ! 计算hmeanr
 
   !     Determine boundary fluxes
     Do n = 1, numnp
@@ -250,8 +252,8 @@ Subroutine watflow(numnp, numel, numeld, ntab, ntabd, mband, mbandd, nmat, nseep
       If (.Not. lwat) f(i) = 0.
       j = 1
       If (lort) j = iadd(i)
-      a(j, i) = a(j, i) + f(i)*cap(i)/dt
-      b(i) = f(i)*cap(i)*hnew(i)/dt - f(i)*(thnew(i)-thold(i))/dt + q(i) - b(i) - ds(i)
+      a(j, i) = a(j, i) + f(i)*cap(i)/dt ! 对时间项导数的处理，左端项
+      b(i) = f(i)*cap(i)*hnew(i)/dt - f(i)*(thnew(i)-thold(i))/dt + q(i) - b(i) - ds(i) ! 右端项
     End Do
     Return
   End Subroutine reset

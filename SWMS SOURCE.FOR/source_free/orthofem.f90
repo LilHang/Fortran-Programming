@@ -166,7 +166,7 @@ Subroutine iadmake(kx, numnp, numel, numeld, maxnb, iad, iadn, iadd)
     !     Determine independent adjacency within each element
     !     version for SWMS_2D
 
-      Do i = 1, numnp
+      Do i = 1, numnp  ! 初始化iad，iadn，iadd数组
         iadn(i) = 0
         iadd(i) = 0
         Do j = 1, maxnb
@@ -174,7 +174,7 @@ Subroutine iadmake(kx, numnp, numel, numeld, maxnb, iad, iadn, iadd)
         End Do
       End Do
 
-      Do e = 1, numel
+      Do e = 1, numel   ! 逐个扫描，建立iad数组
         ncorn = 4
         If (kx(e,3)==kx(e,4)) ncorn = 3
         Do n = 1, ncorn - 2
@@ -182,22 +182,22 @@ Subroutine iadmake(kx, numnp, numel, numeld, maxnb, iad, iadn, iadd)
           j = kx(e, n+1)
           k = kx(e, n+2)
 
-          Call insert(i, j, kk, numnp, maxnb, iad, iadn)
+          Call insert(i, j, kk, numnp, maxnb, iad, iadn) ! 将节点j插入iad的第列，下同
           Call insert(j, i, kk, numnp, maxnb, iad, iadn)
           Call insert(i, k, kk, numnp, maxnb, iad, iadn)
           Call insert(k, i, kk, numnp, maxnb, iad, iadn)
           Call insert(j, k, kk, numnp, maxnb, iad, iadn)
           Call insert(k, j, kk, numnp, maxnb, iad, iadn)
         End Do
-      End Do
+      End Do  ! 已生成iad，iadn数组
 
     !     Determine self-adjacency terms
 
       Do i = 1, numnp
-        Call insert(i, i, kk, numnp, maxnb, iad, iadn)
+        Call insert(i, i, kk, numnp, maxnb, iad, iadn) ! 在此调用insert，传入i， i，kk，得到i的位置
     !     Store self-adjacency position
         iadd(i) = kk
-      End Do
+      End Do ! 已生成iadd数组
       Return
     End Subroutine iadmake
 
@@ -222,7 +222,7 @@ Subroutine iadmake(kx, numnp, numel, numeld, maxnb, iad, iadn, iadd)
 
     !     DETERMINE WHETHER ALREADY IN LIST
 
-      Do l = 1, n
+      Do l = 1, n  ! 判断当前iad中，节点i相邻节点数组是否包含j
         inode = iad(l, i)
         If (inode>=j) Then
           k = l
@@ -235,9 +235,9 @@ Subroutine iadmake(kx, numnp, numel, numeld, maxnb, iad, iadn, iadd)
 
     !     PLACE IN LIST (NUMERICAL ORDER)
 
-      If (found) Then
+      If (found) Then ! 若j在数组，则跳过
         Continue
-      Else
+      Else            ! 否则，增加iad行数插入节点，若大于最大带宽则输出错误信息并终止程序
         If ((n+1)>maxnb) Then
           Write (*, 601) i, maxnb
           Write (50, 601) i, maxnb
@@ -275,7 +275,7 @@ Subroutine iadmake(kx, numnp, numel, numeld, maxnb, iad, iadn, iadd)
     !     EXIT THE LOOP IF AT OR PAST THE REQUIRED POSITION
 
         If (inode>=j) Then
-          If (inode==j) k = l
+          If (inode==j) k = l ! j存在则返回位置退出循环，否则j不存在则返回初始值0
           Goto 20
         End If
       End Do

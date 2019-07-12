@@ -1,11 +1,11 @@
 ! Source file INPUT2.FOR |||||||||||||||||||||||||||||||||||||||||||||||
 
 Subroutine basinf(kat, maxit, tolth, tolh, lwat, lchem, atminf, shortf, seepf, checkf, fluxf, freed, drainf)
-
-    Character *72 hed
-    Character *5 lunit, tunit, munit
-    Logical lwat, lchem, checkf, atminf, shortf, seepf, fluxf, freed, drainf
-    Dimension iu(11)
+! 该子程序用于读入输入文件中的 basic information : A
+    Character *72 hed ! 标题
+    Character *5 lunit, tunit, munit ! 单位
+    Logical lwat, lchem, checkf, atminf, shortf, seepf, fluxf, freed, drainf ! 相关状态设置，见81页
+    Dimension iu(11) ! 输出文件编号数组
     Data iu/50, 71, 72, 75, 76, 77, 78, 79, 80, 81, 82/
 
     Read (30, *)
@@ -19,10 +19,11 @@ Subroutine basinf(kat, maxit, tolth, tolh, lwat, lchem, atminf, shortf, seepf, c
     Read (30, *) maxit, tolth, tolh
     Read (30, *)
     Read (30, *) lwat, lchem, checkf, shortf, fluxf, atminf, seepf, freed, drainf
-    Do i = 1, 11
+    Do i = 1, 11 ! 循环在11个输出文件写入下列标题
       Write (iu(i), *) hed
       Write (iu(i), *)
       Write (iu(i), *) 'Program SWMS_2D'
+  ! 以下函数是为了在每个输出文件写入当前的时间,可选
   !        call getdat(ii,imonth,iday)
   !        call gettim(ihours,mins,isecs,ii)
   !        write(IU(i),100) iday,imonth,ihours,mins,isecs
@@ -36,6 +37,7 @@ Subroutine basinf(kat, maxit, tolth, tolh, lwat, lchem, atminf, shortf, seepf, c
       If (kat==2) Write (iu(i), 130)
       Write (iu(i), *) 'Units: L = ', lunit, ', T = ', tunit, ', M = ', munit
     End Do
+    ! 终端输出下列文字
     Write (*, *) '-----------------------------------------------------'
     Write (*, *) '|                                                   |'
     Write (*, *) '|                     SWMS_2D                       |'
@@ -53,9 +55,9 @@ Subroutine basinf(kat, maxit, tolth, tolh, lwat, lchem, atminf, shortf, seepf, c
     If (kat==0) Write (*, 110)
     If (kat==1) Write (*, 120)
     If (kat==2) Write (*, 130)
-    Write (50, 140) maxit, tolth, tolh
+    Write (50, 140) maxit, tolth, tolh ! 在check.out中写入表头
 
-
+    ! 格式设置
     100 Format (' Date: ', I3, '.', I2, '.', '    Time: ', I3, ':', I2, ':', I2)
     110 Format (' Horizontal plane flow, V = L*L')
     120 Format (' Axisymmetric flow, V = L*L*L')
@@ -66,34 +68,34 @@ Subroutine basinf(kat, maxit, tolth, tolh, lwat, lchem, atminf, shortf, seepf, c
 End Subroutine basinf
 
   !***********************************************************************
-
+  ! 读入materia information
   Subroutine matin(nmatd, nmat, nlay, par, htab1, htabn)
-
+                  ! nmat:最大允许土壤种类；par：土壤水力参数数组
     Real k
     Dimension par(10, nmatd), qe(10)
-    Data qe/1., .99, .90, .85, .75, .65, .50, .35, .20, .10/
+    Data qe/1., .99, .90, .85, .75, .65, .50, .35, .20, .10/ ! 土壤含水量数组，用于土壤水分特征曲线等
 
     Write (*, *) 'reading material information'
-    imax = 10
+    imax = 10 ! qe有效饱和度数组大小
     Read (30, *)
     Read (30, *)
-    Read (30, *) nmat, nlay, htab1, htabn, npar
-    If (nmat>nmatd) Then
+    Read (30, *) nmat, nlay, htab1, htabn, npar ! 读入数据
+    If (nmat>nmatd) Then  ! 限制了最大土壤分层数，主要是出于当时计算机内存限制的考虑 见6.2
       Write (*, *) 'Dimension in NMatD is exceeded'
       Stop
     End If
-    htab1 = -amin1(abs(htab1), abs(htabn))
-    htabn = -amax1(abs(htab1), abs(htabn))
+    htab1 = -amin1(abs(htab1), abs(htabn)) ! 负压水头上限，用于插值快速获得水力参数
+    htabn = -amax1(abs(htab1), abs(htabn)) ! 负压水头下限，用于插值快速获得水力参数
     Read (30, *)
-    Write (50, 110)
-    Do m = 1, nmat
-      Read (30, *)(par(i,m), i=1, npar)
-      Write (50, 120) m, (par(i,m), i=1, npar)
+    Write (50, 110) ! 在check.out写入表头
+    Do m = 1, nmat ! 循环读入、写入各层土壤vg模型参数
+      Read (30, *)(par(i,m), i=1, npar) ! 读入
+      Write (50, 120) m, (par(i,m), i=1, npar) ! 将各层土壤vg模型参数写入check.out
     End Do
-    Write (50, 130)
+    Write (50, 130) ! 在check.out写入表头
     Do m = 1, nmat
-      Write (50, *)
-      Do i = 1, imax
+      Write (50, *) ! 每个土壤类型输入空格作为分割
+      Do i = 1, imax ! 调用materia2模块计算土壤水力参数，写入check.out
         h = fh(qe(i), par(1,m))
         k = fk(h, par(1,m))
         c = fc(h, par(1,m))
@@ -117,23 +119,23 @@ End Subroutine basinf
                  hsat(nmat), thr(nmat), thsat(nmat)
 
     Write (*, *) 'generating materials'
-    htab1 = htab(1)
-    htabn = htab(ntab)
-    dlh = (alog10(-htabn)-alog10(-htab1))/(ntab-1)
+    htab1 = htab(1) ! 负压水头上限
+    htabn = htab(ntab) ! 负压水头下限
+    dlh = (alog10(-htabn)-alog10(-htab1))/(ntab-1) ! 在-htab1到htabn范围内进行线性插值，见4.3.11节
     Do i = 1, ntab
       alh = alog10(-htab1) + (i-1)*dlh
       htab(i) = -10**alh
     End Do
-    Do m = 1, nmat
-      hr = fh(0.0, par(1,m))
-      hsat(m) = fh(1.0, par(1,m))
-      consat(m) = fk(0.0, par(1,m))
-      thr(m) = fq(hr, par(1,m))
-      thsat(m) = fq(0.0, par(1,m))
-      Do i = 1, ntab
-        contab(i, m) = fk(htab(i), par(1,m))
-        captab(i, m) = fc(htab(i), par(1,m))
-        thetab(i, m) = fq(htab(i), par(1,m))
+    Do m = 1, nmat ! 计算每类土土壤相关参数
+      hr = fh(0.0, par(1,m)) ! 残余含水量对应水头
+      hsat(m) = fh(1.0, par(1,m)) ! 饱和含水量对应水头
+      consat(m) = fk(0.0, par(1,m)) ! 饱和水力传导度
+      thr(m) = fq(hr, par(1,m))     ! 残余含水量
+      thsat(m) = fq(0.0, par(1,m))  ! 饱和含水量
+      Do i = 1, ntab ! 计算每类土壤相应h下的相关参数
+        contab(i, m) = fk(htab(i), par(1,m)) ! 水力传导度
+        captab(i, m) = fc(htab(i), par(1,m)) ! 比水容量
+        thetab(i, m) = fq(htab(i), par(1,m)) ! 含水量
       End Do
     End Do
     Return
@@ -154,12 +156,12 @@ End Subroutine basinf
     Read (30, *)(tprint(i), i=1, mpl)
     dtopt = dt
     dtold = dt
-    If (.Not. atminf) Then
+    If (.Not. atminf) Then ! 若没有气象资料输入，则tmax设置为tprint的最大值
       tmax = tprint(mpl)
       tatm = tmax
     End If
     tprint(mpl+1) = tmax
-    told = tinit
+    told = tinit     ! told: previous time level
     t = tinit + dt
     Return
   End Subroutine tmin
@@ -226,7 +228,7 @@ End Subroutine basinf
     Do i = 1, ndr
       Read (30, *)(keldr(i,j), j=1, ned(i))
     End Do
-    Do i = 1, ndr
+    Do i = 1, ndr ! 计算修正系数
       rho = efdim(i, 2)/efdim(i, 1)
       a = (1.+0.405*rho**(-4))/(1.-0.405*rho**(-4))
       b = (1.+0.163*rho**(-8))/(1.-0.163*rho**(-8))
@@ -273,15 +275,15 @@ End Subroutine basinf
     k = 0
 
     11 k = k + 1
-    Read (32, *) n, kode(n), x(n), y(n), hold(n), conc(n), q(n), matnum(n), beta(n), axz(n), bxz(n), dxz(n)
+    Read (32, *) n, kode(n), x(n), y(n), hold(n), conc(n), q(n), matnum(n), beta(n), axz(n), bxz(n), dxz(n) ! 按行读入节点信息
     If (kode(n)>numkd) Then
       Write (*, *) 'Dimension in NumKD is exceeded'
       Stop
     End If
     If (n-k) 12, 15, 13
-    12 Write (*, 130) n
+    12 Write (*, 130) n ! <0 则输出节点编号有误并终止程序
     Stop
-    13 deno = n - k + 1
+    13 deno = n - k + 1 ! >0 当节点序号不连续，则在两者之间线性生成相应节点信息
     dx = (x(n)-x(npr))/deno
     dy = (y(n)-y(npr))/deno
     dp = (hold(n)-hold(npr))/deno
@@ -303,7 +305,7 @@ End Subroutine basinf
     q(k) = q(k-1)
     k = k + 1
     If (k<n) Goto 14
-    15 npr = n
+    15 npr = n        ! 节点序号连续则直接读入
     If (k<numnp) Goto 11
 
     Do n = 1, numnp
@@ -337,7 +339,7 @@ End Subroutine basinf
     Read (32, *)
     Read (32, *)
     Do e = 1, numel
-      If (num-e) 11, 14, 12
+      If (num-e) 11, 14, 12 ! 类似节点的处理，见80页
       11 Read (32, *) num, (kx(num,i), i=1, 4), conaxz(num), conaxx(num), conazz(num), laynum(num)
       If (kx(num,4)==0) kx(num, 4) = kx(num, 3)
       If (num==e) Goto 14
@@ -350,7 +352,7 @@ End Subroutine basinf
       laynum(e) = laynum(e-1)
     14 End Do
     aa = 3.141592654/180.
-    Do e = 1, numel
+    Do e = 1, numel       ! 张量的变换
       ang = aa*conaxz(e)
       caxx = conaxx(e)
       cazz = conazz(e)
@@ -370,21 +372,21 @@ End Subroutine basinf
     End Do
     Do e = 1, numel
       ncorn = 4
-      If (kx(e,3)==kx(e,4)) ncorn = 3
-      Do n = 1, ncorn - 2
+      If (kx(e,3)==kx(e,4)) ncorn = 3 ! 若k==l，则为3顶点
+      Do n = 1, ncorn - 2          ! 4点或3点，单元i，j，k的组成
         i = kx(e, 1)
         j = kx(e, n+1)
         k = kx(e, n+2)
-        listne(i) = listne(i) + 1
+        listne(i) = listne(i) + 1  ! 计算一个节点周围包含的单元个数
         listne(j) = listne(j) + 1
         listne(k) = listne(k) + 1
       End Do
     End Do
 
     lort = .False.
-    lconst = .True.
-    mband = 1
-    Do e = 1, numel
+    lconst = .True. ! whether or not there is a constant number of nodes at any transverse line
+    mband = 1       ! 带宽 或 半带宽
+    Do e = 1, numel  ! 带宽的计算，根据带宽的不同，控制逻辑变量选择相应的方程组解法
       nus = 4
       If (kx(e,3)==kx(e,4)) nus = 3
       Do kk = 1, nus - 2
@@ -403,7 +405,7 @@ End Subroutine basinf
         End If
       End Do
     End Do
-    mband = mband + 1
+    mband = mband + 1  ! 半带宽=（单元节点编号最大差值 + 1）* 节点自由度
     If (mband>mbandd .Or. (lchem .And. 2*mband-1>mbandd)) lort = .True.
     If (.Not. lconst) ij = numnp
     If (mband>10 .Or. numnp>200) lort = .True.
@@ -471,8 +473,8 @@ End Subroutine basinf
     Do i = 1, maxal - 1
       Read (31, *)
     End Do
-    Read (31, *) tmax
-    Rewind 31
+    Read (31, *) tmax ! 读入终止时间
+    Rewind 31       ! 读写位置回到头，便于setatm子程序读入第一天信息
     Do i = 1, 12
       Read (31, *)
     End Do
@@ -512,7 +514,7 @@ End Subroutine basinf
         ae = (ck*bj-cj*bk)/2.
         If (kat==1) xmul = 2.*3.1416*(x(i)+x(j)+x(l))/3.
         betae = (beta(i)+beta(j)+beta(l))/3.
-        sbeta = sbeta + xmul*ae*betae
+        sbeta = sbeta + xmul*ae*betae ! 计算积分
       End Do
     End Do
     Do i = 1, numnp

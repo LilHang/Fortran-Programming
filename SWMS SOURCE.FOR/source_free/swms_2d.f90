@@ -41,6 +41,7 @@ Program swms_2d
              node(nobsd), b1(numnpd), iad(mbandd, numnpd), iadn(numnpd), iadd(numnpd), a1(mbandd, numnpd), &
              res(numnpd), vrv(numnpd), rqi(numnpd, mnorth), rq(numnpd), qq(numnpd), rqidot(mnorth), qi(numnpd, mnorth)
 
+    ! 打开输入文件，创建输出文件
     Open (30, File='SWMS_2D.IN\Selector.in', Status='old')
     Open (32, File='SWMS_2D.IN\Grid.in', Status='old')
     Open (50, File='SWMS_2D.OUT\Check.out', Status='unknown')
@@ -64,21 +65,32 @@ Program swms_2d
 
   ! --- Reading of the input files and initial calculations --------------
 
+    ! 读入basic information赋值给相关变量；创建输出文件并在里写入相关标题；在终端输出标题
     Call basinf(kat, maxit, tolth, tolh, lwat, lchem, atminf, shortf, seepf, checkf, fluxf, freed, drainf)
+    ! 读入节点信息 根据checkf写入check.out
     Call nodinf(numnp, numel, ij, numbp, numnpd, numeld, numbpd, numkd, nobs, nobsd, kode, q, conc, hnew, &
                hold, htemp, x, y, matnum, beta, axz, bxz, dxz, checkf)
+    ! 读入单元信息， 判断节点周围单元个数，计算带宽
     Call elemin(numel, numeld, numnp, kx, laynum, conaxx, conazz, conaxz, checkf, listne, ij, mband, mbandd, lchem, lort)
+    ! 读入几何信息，观测点信息
     Call geomin(numkd, numnp, numbp, nobs, nobsd, swidth, width, kode, kxb, rlen, node)
+    ! 得到iad，iadn，iadd数组
     Call iadmake(kx, numnp, numel, numeld, mbandd, iad, iadn, iadd)
+    ! 关闭网格文件
     Close (32)
+    ! 读入materia information，包括土壤种类数、子区数，土壤水分特征曲线参数等，子程序内调用material2模块土壤水力参数函数，计算每类土壤10个有效饱和度（qe）
+    ! 下的土壤水力参数并写入check.out
     Call matin(nmatd, nmat, nlay, par, htab(1), htab(ntab))
+    ! 生成相关土壤水力参数数组
     Call genmat(ntab, ntabd, nmat, thr, hsat, par, htab, contab, captab, consat, thetab, thsat)
+    ! 计算节点theta k  C，得到con  cap  thold数组
     Call setmat(numnp, ntab, ntabd, nmat, htab, contab, captab, hnew, hold, matnum, par, con, cap, consat, axz, bxz, dxz, hsat, &
                htemp, explic, thetab, thsat, thr, thold)
 
     If (atminf) Then
       Open (31, File='SWMS_2D.IN\Atmosph.in', Status='old')
       Call atmin(gwl0l, sinkf, qgwlf, tinit, tmax, aqh, bqh, hcrits, maxal)
+      ! update time-dependent boundary conditon
       Call setatm(tatm, rtop, rroot, hcrita, width, kxb, numbp, kode, hnew, q, numnp, gwl0l, qgwlf, &
                  freed, cprec, cht, crt, lminstep)
     End If
@@ -89,6 +101,7 @@ Program swms_2d
       Call setsnk(numnp, nmat, matnum, hnew, rroot, sink, p0, poptm, p2h, p2l, p3, r2h, r2l, beta, rlen)
     End If
     If (seepf) Call seepin(nseepd, numspd, nseep, nsp, np)
+    ! 读入drain信息，计算调整的K
     If (drainf) Call drainin(ndr, ndrd, neldrd, numel, nd, ned, keldr, efdim, conaxx, conaxz, conazz)
     If (lchem) Then
       Call chemin(nmat, numbp, cbound, chpar, epsi, tpulse, kodcb, nlevel, lupw, lartd, pecr)
@@ -104,7 +117,9 @@ Program swms_2d
     Open (73, File='SWMS_2D.OUT\Q.out', Status='unknown')
     Open (70, File='SWMS_2D.OUT\Run_Inf.out', Status='unknown')
 
+    ! 在h.out写入节点初始水头
     Call hout(hnew, x, y, numnp, tinit, ij)
+    ! 在th.out写入节点初始含水率
     Call thout(thold, x, y, numnp, tinit, ij)
     Call subreg(numel, numeld, numnp, nmat, hnew, thold, thold, x, y, matnum, laynum, kx, kat, tinit, dt, nlay, 0,&
                 lwat, lchem, conc, chpar, wcuma, wcumt, ccuma, ccumt, wvoli, cvoli, watin, solin)
@@ -130,7 +145,7 @@ Program swms_2d
                                         lort, drainf, nd, ndr, ndrd, rroot, p0, poptm, p2h, p2l, p3, r2h, r2l, &
                                         cono, a1, b1, numnpd, iad, iadn, iadd, vrv, res, rqi, rq, qq, qi, rqidot, &
                                         ecnvrg, rcnvrg, acnvrg, mnorth, maxito)
-    If (.Not. lwat .And. tlevel==1) Then
+    If (.Not. lwat .And. tlevel==1) Then ! 稳定流解法
       If (lchem) Then
         Call chinit(numnp, numel, numeld, nmat, x, y, kx, matnum, nlevel, con, hnew, sink, cbound(5), vx, vz, &
                    conaxx, conazz, conaxz, dispxx, dispzz, dispxz, chpar, thnew, thsat, conc, fc, gc, listne,&

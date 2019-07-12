@@ -32,21 +32,21 @@ Subroutine tmcont(dt, dtmaxw, dtopt, dmul, dmul2, dtmin, iter, tprint, tatm, t, 
     rsoil = abs(rsoil)
     rroot = abs(rroot)
     hcrita = -abs(hcrita)
-    hgwl = gwl + gwl0l
-    rtop = rsoil - prec
+    hgwl = gwl + gwl0l ! prescribed value of pressure head
+    rtop = rsoil - prec ! potential fluid flux
     Do i = 1, numbp
       n = kxb(i)
       k = kode(n)
-      If (k==4 .Or. k==-4) Then
+      If (k==4 .Or. k==-4) Then ! 大气边界
         kode(n) = -4
         q(n) = -width(i)*rtop
         Goto 11
       End If
-      If (k==3) Then
+      If (k==3) Then  ! 变水头边界
         If (abs(hnew(n)-hgwl)>1.E-8) lminstep = .True.
         hnew(n) = hgwl
       End If
-      If (k==-3 .And. .Not. qgwlf .And. .Not. freed) Then
+      If (k==-3 .And. .Not. qgwlf .And. .Not. freed) Then ! 变流量边界
         If (width(i)>0.) rgwlold = -q(n)/width(i)
         If (abs(rgwlold-rgwl)>1.E-8) lminstep = .True.
         q(n) = -width(i)*rgwl
